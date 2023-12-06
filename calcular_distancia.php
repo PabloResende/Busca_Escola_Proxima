@@ -5,8 +5,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $nomeEscola = $_POST["nome_escola"];
         $enderecoUsuario = $_POST["endereco"];
 
-        // Utilizar serviço de geocodificação do OpenStreetMap (OSM)
-        $usuarioLatLng = geocodeOSM($enderecoUsuario);
+        // Verificar se o endereço é um CEP
+        if (preg_match('/^\d{5}-\d{3}$/', $enderecoUsuario)) {
+            // Se for um CEP, buscar as coordenadas usando OpenCage
+            $usuarioLatLng = geocodeOpenCage($enderecoUsuario);
+        } else {
+            // Caso contrário, é um endereço normal
+            $enderecoUsuario .= ', Bahia';
+            $usuarioLatLng = geocodeOSM($enderecoUsuario);
+        }
 
         if ($usuarioLatLng) {
             calcularDistanciaEscola($nomeEscola, $usuarioLatLng);
@@ -26,11 +33,25 @@ function geocodeOSM($endereco)
 
     $url = 'https://nominatim.openstreetmap.org/search?format=json&q=' . urlencode($endereco);
 
+    return getLatLngFromService($url);
+}
+
+function geocodeOpenCage($cep)
+{
+    $apiKey = 'YOUR_OPENCAGE_API_KEY';
+    $url = 'https://api.opencagedata.com/geocode/v1/json?q=' . urlencode($cep) . '&key=' . $apiKey;
+
+    return getLatLngFromService($url);
+}
+
+function getLatLngFromService($url)
+{
     $opts = [
         'http' => [
             'header' => 'User-Agent: PHP'
         ]
     ];
+
     $context = stream_context_create($opts);
 
     $resultado = file_get_contents($url, false, $context);
@@ -38,15 +59,16 @@ function geocodeOSM($endereco)
     if ($resultado) {
         $data = json_decode($resultado, true);
 
-        if (!empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
-            $latitude = (float)$data[0]['lat'];
-            $longitude = (float)$data[0]['lon'];
+        if (!empty($data['results']) && isset($data['results'][0]['geometry']['lat']) && isset($data['results'][0]['geometry']['lng'])) {
+            $latitude = (float)$data['results'][0]['geometry']['lat'];
+            $longitude = (float)$data['results'][0]['geometry']['lng'];
             return ['lat' => $latitude, 'lng' => $longitude];
         }
     }
 
     return null;
 }
+
 
 function calcularDistanciaEscola($nomeEscola, $usuarioLatLng)
 {
