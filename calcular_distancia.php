@@ -4,7 +4,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST["nome_escola"])) {
         $nomeEscola = $_POST["nome_escola"];
         $enderecoUsuario = $_POST["endereco"];
- 
+
         // Utilizar serviço de geocodificação do OpenStreetMap (OSM)
         $usuarioLatLng = geocodeOSM($enderecoUsuario);
 
@@ -22,6 +22,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 function geocodeOSM($endereco)
 {
+    if (is_numeric($endereco) && strlen($endereco) == 8) {
+        $endereco .= ', Brasil';
+    }
+
     $url = 'https://nominatim.openstreetmap.org/search?format=json&q=' . urlencode($endereco);
 
     $opts = [
