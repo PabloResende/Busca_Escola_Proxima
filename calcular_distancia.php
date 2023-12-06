@@ -4,9 +4,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST["nome_escola"])) {
         $nomeEscola = $_POST["nome_escola"];
         $enderecoUsuario = $_POST["endereco"];
+        $cep = isset($_POST["cep"]) ? $_POST["cep"] : null;
 
         // Utilizar serviço de geocodificação do OpenStreetMap (OSM)
-        $usuarioLatLng = geocodeOSM($enderecoUsuario);
+        $usuarioLatLng = geocodeAddress($enderecoUsuario, $cep);
         var_dump($usuarioLatLng);
 
         if ($usuarioLatLng) {
@@ -21,10 +22,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-function geocodeOSM($endereco)
+function geocodeAddress($endereco, $cep)
 {
-    $endereco .= ', Bahia';
+    $cidade = 'Luis Eduardo Magalhães, Bahia';
 
+    $estrategias = [
+        $endereco . ', ' . $cidade,
+        $cep . ', ' . $cidade,
+        $endereco . ', ' . $cidade,
+    ];
+
+    foreach ($estrategias as $estrategia) {
+        $usuarioLatLng = geocode($estrategia);
+
+        if ($usuarioLatLng) {
+            return $usuarioLatLng;
+        }
+    }
+
+    return null;
+}
+
+function geocode($endereco)
+{
     $url = 'https://nominatim.openstreetmap.org/search?format=json&q=' . urlencode($endereco);
 
     $opts = [
