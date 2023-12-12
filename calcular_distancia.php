@@ -1,24 +1,22 @@
 <?php
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    if (isset($_POST["nome_escola"])) {
-        $nomeEscola = $_POST["nome_escola"];
+    if (isset($_POST["escola"])) {
+        $nomeEscola = $_POST["escola"];
         $enderecoUsuario = $_POST["endereco"];
         $cep = isset($_POST["cep"]) ? $_POST["cep"] : null;
 
         // Utilizar serviço de geocodificação do OpenStreetMap (OSM)
         $usuarioLatLng = geocodeAddress($enderecoUsuario, $cep);
-        var_dump($usuarioLatLng);
 
         if ($usuarioLatLng) {
-            calcularDistanciaEscola($nomeEscola, $usuarioLatLng);
+            avaliarNecessidadeOnibus($nomeEscola, $usuarioLatLng);
         } else {
             echo '<h2>Resultado</h2>';
             echo '<p>Erro ao obter as coordenadas do endereço.</p>';
         }
     } else {
-        echo '<h2>Resultado</h2>';
-        echo '<p>Nome da escola não fornecido.</p>';
+        $resultadoHTML = '<h2>Resultado</h2><p>Escola não encontrada.</p>';
     }
 }
 
@@ -47,12 +45,12 @@ function geocode($endereco)
 {
     $url = 'https://nominatim.openstreetmap.org/search?format=json&q=' . urlencode($endereco);
 
-    $opts = [
+    $options = [
         'http' => [
             'header' => 'User-Agent: PHP'
         ]
     ];
-    $context = stream_context_create($opts);
+    $context = stream_context_create($options);
 
     $resultado = file_get_contents($url, false, $context);
 
@@ -69,7 +67,7 @@ function geocode($endereco)
     return null;
 }
 
-function calcularDistanciaEscola($nomeEscola, $usuarioLatLng)
+function avaliarNecessidadeOnibus($nomeEscola, $usuarioLatLng)
 {
     $escolas = [
         ['nome' => 'ESCOLA MUNICIPAL ONERO COSTA DA ROSA', 'lat' => -12.107204, 'lng' => -45.804077],
@@ -145,17 +143,18 @@ function buscarEscolaPorNome($nomeEscola, $escolas)
 }
 
 function haversine($coord1, $coord2)
+// fórmula de haversine
 {
-    $R = 6371; // Raio da Terra em quilômetros
+    $ray = 6371; // Raio da Terra em quilômetros
     $dLat = deg2rad($coord2['lat'] - $coord1['lat']);
     $dLon = deg2rad($coord2['lng'] - $coord1['lng']);
 
-    $a = sin($dLat / 2) * sin($dLat / 2) +
+    $angularDistance = sin($dLat / 2) * sin($dLat / 2) +
         cos(deg2rad($coord1['lat'])) * cos(deg2rad($coord2['lat'])) *
         sin($dLon / 2) * sin($dLon / 2);
 
-    $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+    $haversineFormulaResult = 2 * atan2(sqrt($angularDistance), sqrt(1 - $angularDistance));
 
-    $distancia = $R * $c; // Distância em quilômetros
-    return $distancia;
+    $distance = $ray * $haversineFormulaResult; // Distância em quilômetros
+    return $distance;
 }
